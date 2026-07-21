@@ -16,12 +16,12 @@ is built on top of it.
 | `SlateDiffusion` | Local image generation over **stable-diffusion.cpp**. |
 | `SlateSTT` | On-device speech-to-text (NVIDIA Parakeet via FluidAudio) + the dictation state machine. |
 | `SlateFlowCore` / `SlateFlowCleanup` | Dictation flow + LLM transcript cleanup. |
-| `slatectl` | A headless CLI over the engine — run a local agent from your terminal. |
+| `slatectl` | A headless CLI over the engine: run a local agent from your terminal. |
 
 ## Why it's open
 
 Slate's pitch is "your work stays on your Mac." The honest way to back that claim
-is to let you read the engine and verify it — no hidden network calls, no
+is to let you read the engine and verify it, with no hidden network calls, no
 telemetry. Fork it, build on it, or embed it.
 
 ## Requirements
@@ -35,7 +35,7 @@ The `llama` and `stable-diffusion` binary frameworks are hosted as
 ## Use it
 
 ```swift
-.package(url: "https://github.com/Lange-Co-Consulting/slate-engine.git", from: "0.1.0")
+.package(url: "https://github.com/Lange-Co-Consulting/slate-engine.git", from: "0.1.1")
 ```
 
 ```sh
