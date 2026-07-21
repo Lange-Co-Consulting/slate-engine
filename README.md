@@ -45,6 +45,6 @@ swift run slatectl --help
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Built by [Lange & Co.](https://slate-app.org)
+MIT - see [LICENSE](LICENSE). Built by [Lange und Co. Consulting GmbH](https://slate-app.org)
 Third-party components (llama.cpp, stable-diffusion.cpp, FluidAudio, ripgrep) keep
 their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
