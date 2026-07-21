@@ -1,0 +1,6 @@
+.build/
+.swiftpm/
+.DS_Store
+# Binary frameworks are shipped as GitHub Release assets, not committed.
+Frameworks/*.xcframework
+*.xcframework.zip
