@@ -1,6 +1,6 @@
 # slate-engine
 
-The open-source local-AI engine behind **[Slate](https://slate-app.org)** — a
+The open-source local-AI engine behind **[Slate](https://slate-app.org)** - a
 native macOS workspace that runs open models entirely on your Mac.
 
 Everything here runs **100% offline**. No account, no telemetry, no cloud calls.
