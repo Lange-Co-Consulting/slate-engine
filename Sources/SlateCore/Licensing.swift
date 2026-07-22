@@ -52,6 +52,7 @@ public enum SlateCapability: String, Codable, CaseIterable, Sendable {
     case watchedLibraries
     case transcriptionPro
     case localTools
+    case automations
 
     public enum MinimumTier: String, Codable, Sendable { case free, pro }
 
@@ -62,7 +63,7 @@ public enum SlateCapability: String, Codable, CaseIterable, Sendable {
             return .free
         case .flow, .codeEdits, .imageGeneration, .voiceConversation, .memory,
              .modelCompare, .quickActions, .watchedLibraries, .transcriptionPro,
-             .localTools:
+             .localTools, .automations:
             return .pro
         }
     }
