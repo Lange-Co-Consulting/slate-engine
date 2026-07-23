@@ -1,14 +1,18 @@
 import Foundation
 
-/// One seat in an Agent Chat roundtable.
+/// One seat in an Agent Chat roundtable. Seat identity is distinct from model
+/// identity so the SAME model can take several seats at once: `id` is unique per
+/// SEAT ("<index>:<modelRef>"), while `modelRef` is the shared engine key that
+/// several seats may point at.
 public struct RoundtableParticipant: Codable, Sendable, Equatable, Identifiable {
-    public var id: String        // model ref: local path | "cloud:<id>" | "opencode:<id>" | "claude-code"
+    public var id: String        // unique per SEAT: "<index>:<modelRef>"
+    public var modelRef: String  // engine key: local path | "cloud:<id>" | "opencode:<id>" | "claude-code"
     public var name: String      // display name (prettified model name)
     public var persona: String   // "" = no persona, else a short role instruction
     public var index: Int        // 0-based seat, drives per-speaker color + labeling
 
-    public init(id: String, name: String, persona: String = "", index: Int) {
-        self.id = id; self.name = name; self.persona = persona; self.index = index
+    public init(id: String, modelRef: String, name: String, persona: String = "", index: Int) {
+        self.id = id; self.modelRef = modelRef; self.name = name; self.persona = persona; self.index = index
     }
 }
 
