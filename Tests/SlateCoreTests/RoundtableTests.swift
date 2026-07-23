@@ -2,9 +2,9 @@ import Testing
 @testable import SlateCore
 
 private let roster = [
-    RoundtableParticipant(id: "a", name: "Alice", persona: "the optimist", index: 0),
-    RoundtableParticipant(id: "b", name: "Bob", persona: "", index: 1),
-    RoundtableParticipant(id: "c", name: "Cara", persona: "the skeptic", index: 2),
+    RoundtableParticipant(id: "0:a", modelRef: "a", name: "Alice", persona: "the optimist", index: 0),
+    RoundtableParticipant(id: "1:b", modelRef: "b", name: "Bob", persona: "", index: 1),
+    RoundtableParticipant(id: "2:c", modelRef: "c", name: "Cara", persona: "the skeptic", index: 2),
 ]
 
 @Test func localMemoryEstimateUsesBoundedRoundtableContext() {

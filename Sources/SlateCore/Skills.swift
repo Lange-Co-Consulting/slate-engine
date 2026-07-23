@@ -117,4 +117,82 @@ public enum Skills {
         try? PrivateStorage.write(md, to: file)
         return folder
     }
+
+    /// Move a skill's folder to the Trash (recoverable, not a hard delete). Only ever touches
+    /// the resolved folder inside our skills dir. Returns true on success.
+    @discardableResult
+    public static func remove(_ skill: Skill) -> Bool {
+        let scope = WorkspaceScope(root: directory())
+        guard let folder = try? scope.resolve(skill.id),
+              folder.resolvingSymlinksInPath().path == skill.url.resolvingSymlinksInPath().path
+        else { return false }
+        return (try? FileManager.default.trashItem(at: folder, resultingItemURL: nil)) != nil
+    }
+
+    // MARK: Auto-detect + import existing Claude skills
+
+    /// A skill found in one of the user's Claude homes — importable by copy.
+    public struct Discovered: Identifiable, Sendable, Equatable {
+        public var id: String { folderName }
+        public let folderName: String     // becomes the imported skill's stable id
+        public let name: String
+        public let description: String
+        public let source: URL            // the folder containing SKILL.md
+        public let origin: String         // display label, e.g. "~/.claude/skills"
+    }
+
+    /// The user's real Claude skill homes (read-only — we import by copy, never write here).
+    public static func claudeSkillSources() -> [(url: URL, label: String)] {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        return [
+            (home.appendingPathComponent(".claude/skills", isDirectory: true), "~/.claude/skills"),
+            (home.appendingPathComponent(".claude/plugins", isDirectory: true), "Claude plugins"),
+        ]
+    }
+
+    /// Find every folder holding a `SKILL.md` under the Claude homes, skipping ids we already
+    /// have. Prunes heavy trees (node_modules/.git) and applies the same 64 KB SKILL.md cap as
+    /// `scan()`. Disk I/O — call off the main actor.
+    public static func discoverClaudeSkills(existing: Set<String> = []) -> [Discovered] {
+        let fm = FileManager.default
+        var out: [Discovered] = []
+        var seen = existing
+        for (root, label) in claudeSkillSources() {
+            guard fm.fileExists(atPath: root.path),
+                  let en = fm.enumerator(at: root, includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey],
+                                         options: [.skipsHiddenFiles]) else { continue }
+            for case let url as URL in en {
+                let leaf = url.lastPathComponent
+                if leaf == "node_modules" || leaf == ".git" { en.skipDescendants(); continue }
+                guard leaf == "SKILL.md" else { continue }
+                let folder = url.deletingLastPathComponent()
+                let fname = folder.lastPathComponent
+                guard !seen.contains(fname),
+                      let vals = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
+                      vals.isRegularFile == true, let size = vals.fileSize, size <= 64 * 1024,
+                      let data = try? Data(contentsOf: url), let raw = String(data: data, encoding: .utf8),
+                      !raw.isEmpty else { continue }
+                seen.insert(fname)
+                let p = parse(raw, folderName: fname)
+                out.append(Discovered(folderName: fname, name: p.name, description: p.description,
+                                      source: folder, origin: label))
+            }
+        }
+        return out.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    /// Import a discovered skill by copying ONLY its SKILL.md into our skills dir (no companion
+    /// files, no script execution). Returns the new folder, or nil.
+    @discardableResult
+    public static func importSkill(_ d: Discovered) -> URL? {
+        let scope = WorkspaceScope(root: directory())
+        guard let dest = try? scope.resolve(d.folderName) else { return nil }
+        let srcMD = d.source.appendingPathComponent("SKILL.md")
+        guard let vals = try? srcMD.resourceValues(forKeys: [.fileSizeKey]),
+              let size = vals.fileSize, size <= 64 * 1024,
+              let data = try? Data(contentsOf: srcMD), let raw = String(data: data, encoding: .utf8)
+        else { return nil }
+        try? PrivateStorage.write(raw, to: dest.appendingPathComponent("SKILL.md"))
+        return dest
+    }
 }

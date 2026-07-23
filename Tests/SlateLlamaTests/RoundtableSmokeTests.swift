@@ -23,8 +23,8 @@ func roundtableAlternatesStaysBriefAndSynthesizes() async throws {
         "b": try LlamaEngine(modelPath: (b as NSString).expandingTildeInPath, nCtx: 4096, nGpuLayers: ngl),
     ]
     let roster = [
-        RoundtableParticipant(id: "a", name: "Alpha", index: 0),
-        RoundtableParticipant(id: "b", name: "Beta", index: 1),
+        RoundtableParticipant(id: "0:a", modelRef: "a", name: "Alpha", index: 0),
+        RoundtableParticipant(id: "1:b", modelRef: "b", name: "Beta", index: 1),
     ]
     let topic = "Is a hot dog a sandwich? Give a clear position."
     let rounds = 2
@@ -35,7 +35,7 @@ func roundtableAlternatesStaysBriefAndSynthesizes() async throws {
         let msgs = Roundtable.prompt(for: me, roster: roster, topic: topic, discussion: discussion,
                                      round: round, totalRounds: rounds, isSynthesis: isSynthesis)
         var out = ""
-        for try await piece in await engines[me.id]!.generate(
+        for try await piece in await engines[me.modelRef]!.generate(
             messages: msgs, grammar: nil,
             options: GenOptions(temperature: 0.7, maxTokens: Roundtable.maxTurnTokens)) {
             out += piece
@@ -88,8 +88,8 @@ func reasoningSeatProducesVisibleAnswer() async throws {
     let ngl = env["SLATE_TEST_NGL"].flatMap { Int32($0) } ?? 999
     let engine = try LlamaEngine(modelPath: (path as NSString).expandingTildeInPath, nCtx: 4096, nGpuLayers: ngl)
     let roster = [
-        RoundtableParticipant(id: "a", name: "Ornith", index: 0),
-        RoundtableParticipant(id: "b", name: "Mistral", index: 1),
+        RoundtableParticipant(id: "0:a", modelRef: "a", name: "Ornith", index: 0),
+        RoundtableParticipant(id: "1:b", modelRef: "b", name: "Mistral", index: 1),
     ]
     let me = roster[0]
     let topic = "Is the BMW M6 F06 or the S500 Coupe 2018 the better sports car?"
