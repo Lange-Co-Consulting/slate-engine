@@ -34,3 +34,19 @@ struct ModelNameQualifierTests {
         #expect(ModelName.qualifier("Mistral-7B-gguf.gguf") == "")
     }
 }
+
+@Suite("Quant glued to the version with a dot")
+struct ModelNameDottedQuantTests {
+    @Test("mistral-7b-instruct-v0.3.Q4_K_M puts the quant first")
+    func splitsDottedQuant() {
+        let q = ModelName.qualifier("mistral-7b-instruct-v0.3.Q4_K_M.gguf")
+        #expect(q.hasPrefix("Q4_K_M"))
+        #expect(q.contains("V0.3"))
+        #expect(q.contains("Q4_K_M.") == false)
+    }
+
+    @Test("A plain dotted version without a quant is untouched")
+    func keepsPlainVersion() {
+        #expect(ModelName.qualifier("some-model-instruct-v0.3.gguf").contains("V0.3"))
+    }
+}
