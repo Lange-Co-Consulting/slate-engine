@@ -74,6 +74,25 @@ public enum ModelCatalog {
         return collapsed
     }
 
+    /// On-disk size of the model `url` really represents: for a split GGUF that is the
+    /// WHOLE shard set, not just the first part. Memory guards must use this — sizing a
+    /// 100 GB split model by its 40 GB first shard waves through a load that can freeze
+    /// the machine. Falls back to the single file's size.
+    public static func totalBytes(of url: URL) -> Int64 {
+        let single = Int64((try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0)
+        guard let info = shardInfo(url) else { return single }
+        let dir = url.deletingLastPathComponent()
+        guard let items = try? FileManager.default.contentsOfDirectory(
+            at: dir, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles])
+        else { return single }
+        var total: Int64 = 0
+        for f in items where f.pathExtension == "gguf" {
+            guard let s = shardInfo(f), s.stem == info.stem else { continue }
+            total += Int64((try? f.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0)
+        }
+        return total > 0 ? total : single
+    }
+
     /// Parse `…-00002-of-00005.gguf` into (stem before the shard suffix, 2).
     /// nil when the name is not a shard.
     static func shardInfo(_ url: URL) -> (stem: String, index: Int)? {
