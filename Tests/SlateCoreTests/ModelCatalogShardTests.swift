@@ -48,3 +48,31 @@ struct ModelCatalogShardTests {
         #expect(ModelCatalog.shardInfo(URL(fileURLWithPath: "/m/Qwen2-5-7B-Q4-K-M.gguf")) == nil)
     }
 }
+
+@Suite("Split models are sized by the whole set")
+struct ShardSizingTests {
+    @Test("totalBytes sums every shard, not just the first")
+    func sumsShards() throws {
+        let dir = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("shard-size-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let names = ["Big-00001-of-00003.gguf", "Big-00002-of-00003.gguf", "Big-00003-of-00003.gguf"]
+        for (i, n) in names.enumerated() {
+            try Data(repeating: 0, count: 1000 * (i + 1)).write(to: dir.appendingPathComponent(n))
+        }
+        let first = dir.appendingPathComponent(names[0])
+        #expect(ModelCatalog.totalBytes(of: first) == 6000)   // 1000+2000+3000, not 1000
+    }
+
+    @Test("A single-file model reports its own size")
+    func singleFile() throws {
+        let dir = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("single-size-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let f = dir.appendingPathComponent("Solo-Q4.gguf")
+        try Data(repeating: 0, count: 4321).write(to: f)
+        #expect(ModelCatalog.totalBytes(of: f) == 4321)
+    }
+}
