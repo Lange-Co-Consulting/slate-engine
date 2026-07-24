@@ -47,7 +47,44 @@ public enum ModelCatalog {
                 found.append(ModelEntry(url: url, bytes: bytes))
             }
         }
-        return found.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        return collapseShards(found).sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    /// llama.cpp splits a large model into `<name>-00001-of-00003.gguf` shards. Every
+    /// shard is itself a valid .gguf, so a plain scan listed one 100 GB model as three
+    /// separate entries — which also reads as duplicates. Keep only the FIRST shard
+    /// (llama.cpp loads the whole set from it) and report the set's summed size.
+    static func collapseShards(_ entries: [ModelEntry]) -> [ModelEntry] {
+        var totals: [String: Int64] = [:]        // set key -> summed bytes
+        var firsts: [String: ModelEntry] = [:]   // set key -> the 00001 shard
+        var singles: [ModelEntry] = []
+        for e in entries {
+            guard let s = shardInfo(e.url) else { singles.append(e); continue }
+            let setKey = e.url.deletingLastPathComponent().path + "/" + s.stem
+            totals[setKey, default: 0] += e.bytes
+            if s.index == 1 { firsts[setKey] = e }
+        }
+        var collapsed = singles
+        for (setKey, total) in totals {
+            // First shard missing (interrupted download): list nothing rather than an
+            // entry that cannot load.
+            guard let first = firsts[setKey] else { continue }
+            collapsed.append(ModelEntry(url: first.url, bytes: total))
+        }
+        return collapsed
+    }
+
+    /// Parse `…-00002-of-00005.gguf` into (stem before the shard suffix, 2).
+    /// nil when the name is not a shard.
+    static func shardInfo(_ url: URL) -> (stem: String, index: Int)? {
+        let name = url.deletingPathExtension().lastPathComponent
+        let parts = name.split(separator: "-")
+        guard parts.count >= 4, parts[parts.count - 2] == "of",
+              let idx = Int(parts[parts.count - 3]), let total = Int(parts[parts.count - 1]),
+              total > 1, idx >= 1, idx <= total else { return nil }
+        let stem = parts[0..<(parts.count - 3)].joined(separator: "-")
+        guard !stem.isEmpty else { return nil }
+        return (stem, idx)
     }
 
     /// True for a multimodal projector ("mmproj") GGUF - the companion that adds vision to a model.
