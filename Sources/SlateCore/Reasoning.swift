@@ -8,8 +8,19 @@ import Foundation
 /// Only pipe-bearing control tokens are stripped, so real markup like `</div>`
 /// or `<T>` in a normal answer is left untouched.
 public enum Reasoning {
+    /// Reasoning chat templates (Qwen3, DeepSeek-R1 …) place the opening `<think>` in the
+    /// PROMPT, so the model's own output starts inside the reasoning and only ever emits
+    /// the CLOSING tag. With no opener nothing below matched and the whole chain of
+    /// thought was shown as the answer. Re-attach the implied opener first.
+    static func normalizeOrphanedThink(_ text: String) -> String {
+        guard let close = text.range(of: "</think>") else { return text }
+        if let open = text.range(of: "<think>"), open.lowerBound < close.lowerBound { return text }
+        return "<think>" + text
+    }
+
     /// For display: the (collapsible) reasoning and the visible answer.
-    public static func split(_ text: String) -> (thoughts: String?, answer: String) {
+    public static func split(_ raw: String) -> (thoughts: String?, answer: String) {
+        let text = normalizeOrphanedThink(raw)
         if text.contains("<think>") {
             // Extract EVERY <think>…</think> block (Claude Code interleaves several
             // with tool calls), collect them into the collapsible thoughts, and
@@ -39,8 +50,8 @@ public enum Reasoning {
 
     /// For re-feeding into the next prompt: just the answer, with ALL reasoning
     /// blocks and stray control tokens removed.
-    public static func strip(_ text: String) -> String {
-        var t = text
+    public static func strip(_ raw: String) -> String {
+        var t = normalizeOrphanedThink(raw)
         while let o = t.range(of: "<think>") {
             if let c = t.range(of: "</think>", range: o.upperBound..<t.endIndex) {
                 t.removeSubrange(o.lowerBound..<c.upperBound)
