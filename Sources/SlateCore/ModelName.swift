@@ -61,13 +61,25 @@ public enum ModelName {
         var quant: [String] = []
         var rest: [String] = []
         for token in tokens[from...] {
-            let t = token.lowercased()
+            // Some names glue the quant to the version with a dot
+            // (mistral-7b-instruct-v0.3.Q4_K_M) — split it back out so the quant leads
+            // and the version stays readable, instead of "Instruct V0.3.Q4_K_M".
+            var head = token
+            // Some names glue the quant to the version with a dot
+            // (mistral-7b-instruct-v0.3.Q4_K_M): pull it out so the quant leads and the
+            // version stays readable, instead of "Instruct V0.3.Q4_K_M".
+            if let dot = token.range(of: "\\.i?[qQ][0-9][^.]*$", options: .regularExpression) {
+                quant.append(String(token[dot.lowerBound...]).dropFirst().uppercased())
+                head = String(token[..<dot.lowerBound])
+            }
+            if head.isEmpty { continue }
+            let t = head.lowercased()
             if formats.contains(t) { continue }
             if t.range(of: "^i?q[0-9]", options: .regularExpression) != nil
                 || ["f16", "bf16", "f32", "fp16", "fp32", "int8", "int4"].contains(t) {
-                quant.append(token.uppercased())
+                quant.append(head.uppercased())
             } else {
-                rest.append(token.prefix(1).uppercased() + token.dropFirst())
+                rest.append(head.prefix(1).uppercased() + head.dropFirst())
             }
         }
         let tail = quant + (rest.isEmpty ? [] : [rest.joined(separator: " ")])
