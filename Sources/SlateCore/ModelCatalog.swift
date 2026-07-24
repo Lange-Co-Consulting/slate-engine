@@ -74,6 +74,22 @@ public enum ModelCatalog {
         return collapsed
     }
 
+    /// Which store an entry came from: "Models" (Slate's own), "LM Studio", else the
+    /// parent folder name. Two real copies of the same model in different roots are a
+    /// genuine on-disk duplicate — showing the origin explains them instead of hiding one.
+    public static func sourceLabel(for url: URL) -> String {
+        let path = url.resolvingSymlinksInPath().path
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let ownRoot = home.appendingPathComponent("Models").resolvingSymlinksInPath().path
+        if path.hasPrefix(ownRoot + "/") { return "Models" }
+        for lm in [".lmstudio/models", ".cache/lm-studio/models"] {
+            let root = home.appendingPathComponent(lm).resolvingSymlinksInPath().path
+            if path.hasPrefix(root + "/") { return "LM Studio" }
+        }
+        let parent = url.deletingLastPathComponent().lastPathComponent
+        return parent.isEmpty ? "" : parent
+    }
+
     /// On-disk size of the model `url` really represents: for a split GGUF that is the
     /// WHOLE shard set, not just the first part. Memory guards must use this — sizing a
     /// 100 GB split model by its 40 GB first shard waves through a load that can freeze

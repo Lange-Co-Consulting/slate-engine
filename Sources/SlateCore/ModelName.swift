@@ -36,6 +36,44 @@ public enum ModelName {
         return token
     }
 
+    /// The disambiguating tail `pretty()` deliberately drops: quantisation, revision and
+    /// fine-tune variant. `Qwen3-30B-A3B-Instruct-2507-Q4_K_M.gguf` → "Q4_K_M · Instruct 2507".
+    /// "" when the name carries nothing distinguishing. Two files that prettify identically
+    /// are otherwise indistinguishable in every picker in the app.
+    public static func qualifier(_ raw: String) -> String {
+        var base = raw
+        for ext in [".gguf", ".ggml", ".safetensors", ".bin", ".pt", ".pth"] where base.lowercased().hasSuffix(ext) {
+            base = String(base.dropLast(ext.count)); break
+        }
+        // Split on '-' and space only — NOT '_', so a quant like Q4_K_M stays one token.
+        let tokens = base.split(whereSeparator: { $0 == "-" || $0 == " " }).map(String.init)
+        var start: Int? = nil
+        var keptAny = false
+        for (i, token) in tokens.enumerated() {
+            if isNoise(token) {
+                if !keptAny { continue }       // pretty() skips a LEADING noise token
+                start = i; break
+            }
+            keptAny = true
+        }
+        guard let from = start else { return "" }
+        let formats: Set<String> = ["gguf", "ggml", "safetensors", "bin", "pt", "pth"]
+        var quant: [String] = []
+        var rest: [String] = []
+        for token in tokens[from...] {
+            let t = token.lowercased()
+            if formats.contains(t) { continue }
+            if t.range(of: "^i?q[0-9]", options: .regularExpression) != nil
+                || ["f16", "bf16", "f32", "fp16", "fp32", "int8", "int4"].contains(t) {
+                quant.append(token.uppercased())
+            } else {
+                rest.append(token.prefix(1).uppercased() + token.dropFirst())
+            }
+        }
+        let tail = quant + (rest.isEmpty ? [] : [rest.joined(separator: " ")])
+        return tail.filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
     public static func pretty(_ raw: String) -> String {
         // Drop a trailing model-file extension.
         var base = raw
