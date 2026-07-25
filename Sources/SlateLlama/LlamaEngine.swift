@@ -189,6 +189,18 @@ public actor LlamaEngine: LLMEngine {
     /// metadata) - surfaced so the UI can show real numbers, not a hardcoded cap.
     public nonisolated let contextWindow: Int
     public nonisolated let trainedContext: Int
+    /// How many multi-token-prediction heads the loaded weights carry, 0 for none.
+    ///
+    /// Reported, not used. A model with MTP heads can in principle draft its own next tokens and
+    /// verify them in a single pass, which is speculative decoding without a second model in
+    /// memory. The runtime supports it, but of that machinery only this one accessor is declared
+    /// `LLAMA_API` in the pinned header; the functions that would *execute* the heads are
+    /// C++-mangled and undeclared. Driving them would mean hand-declaring mangled symbols against
+    /// a SHA-pinned binary, which is a rebuild of the framework rather than a feature.
+    ///
+    /// Surfacing the count is honest and free: it says what the weights can do without implying
+    /// Slate does it.
+    public nonisolated let mtpHeads: Int
     /// Cooperative stop flag, set from any thread (Stop button) and polled by the
     /// generation loop. More reliable than Task cancellation, which doesn't fire
     /// through `for try await` while the producer is actively yielding tokens.
@@ -233,6 +245,7 @@ public actor LlamaEngine: LLMEngine {
         self.nBatchCap = Int32(batchCap)
         self.contextWindow = effective
         self.trainedContext = trained
+        self.mtpHeads = max(0, Int(llama_model_n_layer_nextn(model)))
 
         // Optional multimodal projector. A failure here is non-fatal: the model
         // still works as a text engine, so we fall back to nil rather than throw.
