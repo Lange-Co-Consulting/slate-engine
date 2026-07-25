@@ -62,7 +62,7 @@ public struct EditTool: Sendable {
                 let ok = await gate.confirm(ApprovalRequest(
                     kind: .fileWrite,
                     risk: risk,
-                    title: "Apply edits to \(path)  (+\(s.added) −\(s.removed))",
+                    title: "Apply edits to \(path)  (+\(s.added) -\(s.removed))",
                     detail: LineDiff.unified(old: original, new: buffer),
                     scope: path))
                 guard ok else {
